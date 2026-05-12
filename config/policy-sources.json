@@ -1,0 +1,74 @@
+[
+  {
+    "id": "bundesregierung-presse",
+    "name": "Bundesregierung Pressemitteilungen",
+    "publisher": "Presse- und Informationsamt der Bundesregierung",
+    "regionLevel": "联邦",
+    "regionName": "Deutschland",
+    "defaultCategory": "综合政策",
+    "feedUrl": "https://www.bundesregierung.de/service/rss/breg-de/1151244/feed.xml"
+  },
+  {
+    "id": "baden-wuerttemberg",
+    "name": "Landesregierung Baden-Württemberg",
+    "publisher": "Landesregierung Baden-Württemberg",
+    "regionLevel": "州",
+    "regionName": "Baden-Württemberg",
+    "defaultCategory": "州级政策",
+    "feedUrl": "https://www.baden-wuerttemberg.de/de/service/rss/xml/rss-alle-meldungen"
+  },
+  {
+    "id": "berlin-presse",
+    "name": "Land Berlin Presseportal",
+    "publisher": "Land Berlin",
+    "regionLevel": "州",
+    "regionName": "Berlin",
+    "defaultCategory": "州级政策",
+    "feedUrl": "https://www.berlin.de/presse/pressemitteilungen/index/feed"
+  },
+  {
+    "id": "bayern-presse",
+    "name": "Bayerisches Landesportal Pressemitteilungen",
+    "publisher": "Bayerische Staatsregierung",
+    "regionLevel": "州",
+    "regionName": "Bayern",
+    "defaultCategory": "州级政策",
+    "feedUrl": "https://www.bayern.de/rss/pm_alle.php"
+  },
+  {
+    "id": "hessen-presse",
+    "name": "Hessen Landesregierung Presse-Feed",
+    "publisher": "Hessische Landesregierung",
+    "regionLevel": "州",
+    "regionName": "Hessen",
+    "defaultCategory": "州级政策",
+    "feedUrl": "https://hessen.de/Presse-Feed/all"
+  },
+  {
+    "id": "schleswig-holstein-presse",
+    "name": "Schleswig-Holstein Landesregierung Pressemitteilungen",
+    "publisher": "Landesregierung Schleswig-Holstein",
+    "regionLevel": "州",
+    "regionName": "Schleswig-Holstein",
+    "defaultCategory": "州级政策",
+    "feedUrl": "https://www.schleswig-holstein.de/DE/landesportal/service/RSS/RSS_PI_alle/RSSNewsfeed_PI_alle.xml?nn=a538b314-dfbb-490b-8875-8150c3745a98"
+  },
+  {
+    "id": "stuttgart-aktuelle-meldungen",
+    "name": "Landeshauptstadt Stuttgart aktuelle Meldungen",
+    "publisher": "Landeshauptstadt Stuttgart",
+    "regionLevel": "市",
+    "regionName": "Stuttgart",
+    "defaultCategory": "城市政策",
+    "feedUrl": "https://www.stuttgart.de/service/aktuelle-meldungen/?action=submit&sp%3Acmp=search-1-0-searchResult&sp%3Aout=rss"
+  },
+  {
+    "id": "landkreis-ludwigsburg",
+    "name": "Landratsamt Ludwigsburg News",
+    "publisher": "Landratsamt Ludwigsburg",
+    "regionLevel": "Landkreis",
+    "regionName": "Landkreis Ludwigsburg",
+    "defaultCategory": "县级政策",
+    "feedUrl": "https://www.landkreis-ludwigsburg.de/chatbot/rss-news/"
+  }
+]

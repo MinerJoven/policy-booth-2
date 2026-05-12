@@ -1,0 +1,43 @@
+{
+  "name": "de-policy-stage",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "run": "node scripts/policy-runner.mjs",
+    "policy": "node scripts/policy-runner.mjs",
+    "ingest:policies": "node scripts/ingest-official-policies.mjs",
+    "pipeline:policies": "node scripts/run-policy-pipeline.mjs",
+    "repair:sources": "node scripts/repair-policy-sources.mjs",
+    "review:policies": "node scripts/review-policies.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.49.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "^16.2.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.4",
+    "playwright": "^1.59.1",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  }
+}
