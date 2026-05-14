@@ -24,7 +24,7 @@ from supabase import create_client, Client
 
 # --- Config ---
 BA_API_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
-BA_API_KEY = "jobboerse-jobsuche"
+BA_API_KEY = os.environ.get("BA_API_KEY", "jobboerse-jobsuche")
 HEADERS = {"X-API-Key": BA_API_KEY, "User-Agent": "policy-booth-2/1.0"}
 
 # 华人特供关键词
