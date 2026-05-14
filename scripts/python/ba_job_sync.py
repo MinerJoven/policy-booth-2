@@ -3,8 +3,8 @@
 政策展台 2.0 — 联邦劳动局 (BA) Jobbörse API 同步脚本
 对应 SPEC.md 4.2 节
 
-数据来源: https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4
-认证: X-API-Key: jobboerse-jobsuche (固定公开值)
+BA_API_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
+BA_API_KEY = "jobboerse-jobsuche"
 文档: github.com/bundesAPI/jobsuche-api
 """
 
@@ -23,7 +23,7 @@ import httpx
 from supabase import create_client, Client
 
 # --- Config ---
-BA_API_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4"
+BA_API_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
 BA_API_KEY = "jobboerse-jobsuche"
 HEADERS = {"X-API-Key": BA_API_KEY, "User-Agent": "policy-booth-2/1.0"}
 
