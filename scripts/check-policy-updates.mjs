@@ -9,7 +9,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
-import httpx from "httpx";
+import * as httpx from "httpx";
 import { loadPolicyEnv, assertPolicyWriteEnv } from "./policy-env.mjs";
 
 // ─── 配置 ───────────────────────────────────────────────
