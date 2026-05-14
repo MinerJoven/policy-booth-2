@@ -1,0 +1,46 @@
+name: Check Policy Updates
+
+on:
+  schedule:
+    # Monthly on the 1st at 05:00 UTC
+    - cron: "0 5 1 * *"
+  workflow_dispatch:
+    inputs:
+      full_scrape:
+        description: "Force full scrape (ignore ETag)"
+        required: false
+        default: "false"
+
+jobs:
+  check-updates:
+    name: Check Policy Updates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install httpx beautifulsoup4 python-dotenv supabase
+
+      - name: Run policy scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_CN_API_KEY: ${{ secrets.MINIMAX_CN_API_KEY }}
+          FULL_SCRAPE: ${{ github.event.inputs.full_scrape || 'false' }}
+        run: |
+          node scripts/check-policy-updates.mjs
+
+      - name: Report results
+        run: |
+          echo "Policy check complete"

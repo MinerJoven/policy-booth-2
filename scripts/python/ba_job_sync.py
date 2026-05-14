@@ -4,7 +4,7 @@
 对应 SPEC.md 4.2 节
 
 BA_API_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
-BA_API_KEY = "jobboerse-jobsuche"
+BA_API_KEY = 从环境变量 BA_API_KEY 读取，回退值为 jobboerse-jobsuche
 文档: github.com/bundesAPI/jobsuche-api
 """
 
