@@ -9,13 +9,26 @@
 
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
-import * as httpx from "httpx";
 import { loadPolicyEnv, assertPolicyWriteEnv } from "./policy-env.mjs";
 
 // ─── 配置 ───────────────────────────────────────────────
 const POLICY_TABLE = "policy_pages";
 const QUEUE_TABLE = "translation_queue";
 const IS_FULL_SCRAPE = process.env.FULL_SCRAPE === "true";
+
+// Native fetch timeout helper
+async function fetchWithTimeout(url, opts = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const r = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(timer);
+    return r;
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
 
 // 政策来源配置
 const POLICY_SOURCES = [
@@ -172,14 +185,7 @@ const supabase = createClient(
 );
 
 // ─── HTTP 客户端 ─────────────────────────────────────────
-const http = httpx.createClient({
-  timeout: 30000,
-  headers: {
-    "User-Agent": "Policy-Booth-2/1.0 (German policy aggregator for Chinese users)",
-    "Accept": "text/html,application/xhtml+xml",
-    "Accept-Language": "de-DE,de;q=0.9",
-  },
-});
+// Native fetch with timeout + ETag support
 
 // ─── 工具函数 ────────────────────────────────────────────
 function md5hash(text) {
@@ -194,13 +200,23 @@ async function fetchWithETag(url, storedETag = null, storedLastModified = null) 
   }
 
   try {
-    const resp = await http.get(url, { headers });
-    const status = resp.statusCode;
-    const etag = resp.headers["etag"] || null;
-    const lastModified = resp.headers["last-modified"] || null;
-    const body = resp.content;
+    const headers = {
+      "User-Agent": "Policy-Booth-2/1.0",
+      "Accept": "text/html,application/xhtml+xml",
+      "Accept-Language": "de-DE,de;q=0.9",
+    };
+    if (!IS_FULL_SCRAPE) {
+      if (storedETag) headers["If-None-Match"] = storedETag;
+      if (storedLastModified) headers["If-Modified-Since"] = storedLastModified;
+    }
+    const resp = await fetchWithTimeout(url, { headers });
+    const status = resp.status;
+    const etag = resp.headers.get("etag") || null;
+    const lastModified = resp.headers.get("last-modified") || null;
+    const body = await resp.text();
+    const changed = status !== 304; // 304 = not modified
 
-    return { status, etag, lastModified, body, changed: true };
+    return { status, etag, lastModified, body, changed };
   } catch (err) {
     console.error(`[ERROR] Failed to fetch ${url}: ${err.message}`);
     return { status: 0, etag: null, lastModified: null, body: null, changed: false, error: err.message };
