@@ -19,6 +19,7 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.49.1",
     "clsx": "^2.1.1",
+    "httpx": "^3.0.1",
     "lucide-react": "^0.468.0",
     "next": "^16.2.4",
     "pg": "^8.20.0",
