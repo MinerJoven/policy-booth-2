@@ -113,38 +113,39 @@ def detect_job_tags(job: dict[str, Any]) -> list[str]:
 
 def normalize_job(raw: dict[str, Any]) -> dict[str, Any]:
     """将 BA API 原始数据标准化为 jobs 表字段"""
-    refs = raw.get("arbeitsmarktdaten", {})
-    title_de = refs.get("berufsbezeichnung", "") or raw.get("titel", "")
+    # API 返回的 refnr 在顶层，arbeitsmarktdaten 在某些响应中为空
+    refnr = str(raw.get("refnr", "")) or str(raw.get("arbeitsmarktdaten", {}).get("refnr", ""))
+    title_de = raw.get("titel", "") or raw.get("berufsbezeichnung", "") or ""
 
     # 工作城市
     city = ""
-    if "arbeitsort" in refs:
-        ort = refs["arbeitsort"]
+    if "arbeitsort" in raw:
+        ort = raw["arbeitsort"]
         city = ort.get("ort", ort.get("stadt", "")) or ""
 
     # 州代码
-    state_code = refs.get("bundesland", "") or ""
+    state_code = raw.get("region", "") or raw.get("arbeitsmarktdaten", {}).get("bundesland", "") or ""
 
     # 发布时间
     published_at = None
-    if "freigegebenam" in refs:
-        published_at = refs["freigegebenam"][:10] if len(refs["freigegebenam"]) >= 10 else None
+    if "aktuelleVeroeffentlichungsdatum" in raw:
+        published_at = raw["aktuelleVeroeffentlichungsdatum"][:10] if len(raw["aktuelleVeroeffentlichungsdatum"]) >= 10 else None
 
-    # 工作类型
-    arbeitszeit = refs.get("arbeitszeit", [])
+    # 工作类型 - 有些响应直接包含
+    arbeitszeit = raw.get("arbeitszeit", []) or raw.get("arbeitsmarktdaten", {}).get("arbeitszeit", [])
     work_type = classify_work_type(arbeitszeit if isinstance(arbeitszeit, list) else [])
 
     return {
-        "refnr": str(refs.get("refnr", "")),
+        "refnr": refnr,
         "title_de": title_de,
-        "employer": refs.get("arbeitgeber", "") or "",
+        "employer": raw.get("arbeitgeber", "") or "",
         "city": city,
         "state_code": state_code,
         "work_type": work_type,
-        "is_limited": bool(refs.get("befristet", False)),
+        "is_limited": False,
         "entry_date": None,
         "tags": detect_job_tags(raw),
-        "source_url": f"https://www.arbeitsagentur.de/jobsuche/jobangebot/{refs.get('refnr', '')}",
+        "source_url": f"https://www.arbeitsagentur.de/jobsuche/jobangebot/{refnr}",
         "published_at": published_at,
         "is_active": True,
         "translated": False,
@@ -167,7 +168,7 @@ def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
             result = fetch_jobs(keyword)
             stellenangebote = result.get("stellenangebote", [])
             for item in stellenangebote:
-                refnr = str(item.get("arbeitsmarktdaten", {}).get("refnr", ""))
+                refnr = str(item.get("refnr", "")) or str(item.get("arbeitsmarktdaten", {}).get("refnr", ""))
                 if refnr and refnr not in all_jobs:
                     all_jobs[refnr] = normalize_job(item)
         except Exception as e:
