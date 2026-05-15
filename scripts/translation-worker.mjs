@@ -21,7 +21,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABA
 
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || "https://api.minimaxi.com/anthropic";
 const MINIMAX_MODEL = process.env.MINIMAX_MODEL || "MiniMax-M2.7";
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 5; // 小批次避免超出 MiniMax 并发限制
 const MAX_RETRIES = 3;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -35,34 +35,58 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // --- MiniMax API ---
 async function generateMiniMaxText({ prompt, system, maxTokens = 4000, temperature = 0.1 }) {
-  const response = await fetch(`${MINIMAX_BASE_URL}/v1/messages`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY || ""}`,
-      "x-api-key": process.env.MINIMAX_API_KEY || "",
-    },
-    body: JSON.stringify({
-      model: MINIMAX_MODEL,
-      max_tokens: maxTokens,
-      temperature,
-      system,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${MINIMAX_BASE_URL}/v1/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY || ""}`,
+          "x-api-key": process.env.MINIMAX_API_KEY || "",
+        },
+        body: JSON.stringify({
+          model: MINIMAX_MODEL,
+          max_tokens: maxTokens,
+          temperature,
+          system,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`MiniMax API error ${response.status}: ${text}`);
-  }
+      if (response.status === 429) {
+        // Rate limit — wait with exponential backoff then retry
+        const retryAfter = parseInt(response.headers.get("retry-after") || "10", 10);
+        const backoff = attempt === 0 ? retryAfter : Math.pow(2, attempt) * 5;
+        console.warn(`[MiniMax] 429 rate limit, retrying in ${backoff}s (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
+        await new Promise((resolve) => setTimeout(resolve, backoff * 1000));
+        continue;
+      }
 
-  const data = await response.json();
-  // MiniMax anthropic-compatible format
-  const content = data.content;
-  if (Array.isArray(content)) {
-    return content.find((c) => c.type === "text")?.text || "";
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`MiniMax API error ${response.status}: ${text}`);
+      }
+
+      const data = await response.json();
+      // MiniMax anthropic-compatible format
+      const content = data.content;
+      if (Array.isArray(content)) {
+        return content.find((c) => c.type === "text")?.text || "";
+      }
+      return content?.text || "";
+    } catch (err) {
+      lastError = err;
+      if (attempt < MAX_RETRIES && String(err.message).includes("429")) {
+        const backoff = Math.pow(2, attempt) * 5;
+        console.warn(`[MiniMax] Retrying after error: ${err.message.slice(0, 100)}, backoff ${backoff}s`);
+        await new Promise((resolve) => setTimeout(resolve, backoff * 1000));
+        continue;
+      }
+      throw err;
+    }
   }
-  return content?.text || "";
+  throw lastError;
 }
 
 // --- Prompts ---
@@ -100,7 +124,9 @@ const JOB_PROMPT = `将以下德语职位信息翻译为中文：
 
 const TAG_CLASSIFY_PROMPT = `你是一个德国招聘信息分类专家。仔细阅读以下职位描述，判断它最适合哪些分类标签。
 
-允许的标签（只能从中选择，可以选多个，也可以不选）：
+要求：只要职位描述中有相关信息，就应打上对应标签。不要保守估计，优先打上所有适用的标签。
+
+允许的标签（只能从中选择，可以选多个）：
 - 需要中文：职位要求会中文，或工作内容涉及中国相关业务
 - 无语言要求：无需德语或英语语言证书
 - 英语即可：只需英语，无需德语
@@ -212,7 +238,11 @@ async function classifyJobTags(descriptionDe) {
   try {
     const parsed = JSON.parse(extractJson(text));
     const rawTags = Array.isArray(parsed.tags) ? parsed.tags : [];
-    return rawTags.filter((t) => VALID_TAGS.has(t));
+    const validTags = rawTags.filter((t) => VALID_TAGS.has(t));
+    if (validTags.length === 0 && rawTags.length > 0) {
+      console.warn(`[TAG] classifyJobTags: model returned invalid tags ${JSON.stringify(rawTags)}, filtered to []`);
+    }
+    return validTags;
   } catch {
     return [];
   }
