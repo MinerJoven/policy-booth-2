@@ -265,6 +265,7 @@ async function processQueue() {
             .from(V2_POLICY_TABLE)
             .update({ ...translated, updated_at: new Date().toISOString() })
             .eq("id", item.source_id);
+        }
 
         let jobTags = [];
         if (item.source_type === "job") {
