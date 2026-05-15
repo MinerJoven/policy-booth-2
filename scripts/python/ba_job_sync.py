@@ -110,22 +110,11 @@ def keyword_to_tags(keyword: str) -> list[str]:
 
 
 def detect_job_tags(job: dict[str, Any]) -> list[str]:
-    """检测职位描述中的关键词标签（需要详情数据）"""
-    tags = []
-    text = json.dumps(job).lower()
-
-    if any(kw in text for kw in ["chinesisch", "mandarin", "chinese"]):
-        tags.append("需要中文")
-    if any(kw in text for kw in ["heimarbeit", "homeoffice", "remote", "fernarbeit"]):
-        tags.append("远程可选")
-    if any(kw in text for kw in ["english ok", "no german", "german not required", "keine deutschkenntnisse"]):
-        tags.append("无语言要求")
-    if any(kw in text for kw in ["werkstudent"]):
-        tags.append("留学生适合")
-    if any(kw in text for kw in ["praktikum", "ausbildung"]):
-        tags.append("实习岗")
-
-    return tags
+    """
+    占位函数。标签现在由 translation-worker.mjs 调用 MiniMax AI 分类后写入。
+    此函数始终返回空列表，避免关键词匹配产生不准确标签。
+    """
+    return []
 
 
 def normalize_job(raw: dict[str, Any]) -> dict[str, Any]:
