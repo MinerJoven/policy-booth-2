@@ -122,39 +122,17 @@ const JOB_PROMPT = `将以下德语职位信息翻译为中文：
   "brief_zh": "两句话中文摘要（≤50字，描述核心职责和要求）"
 }`;
 
-const TAG_CLASSIFY_PROMPT = `分析以下德国职位描述，输出 JSON 格式的标签数组。
-
-要求：直接输出 JSON，不要任何解释、文字说明或思考过程。只输出一个 JSON 对象。
-
-允许的标签（只能从中选择，可以选多个）：
-- 需要中文：职位要求会中文，或工作内容涉及中国相关业务
-- 无语言要求：无需德语或英语语言证书
-- 英语即可：只需英语，无需德语
-- 留学生适合：适合学生兼职或实习，包括Werkstudent、Praktikum、Ausbildung等
-- 华人优先：优先考虑华人应聘者
-- 无经验可：明确表示欢迎无经验申请者
-- 远程可选：支持远程或部分远程办公
-- 迷你岗：Geringfügige Beschäftigung（每月不超过538欧元）
-- 实习岗：实习性质（Praktikum、Ausbildung等）
-- 可办工作签证：可提供正式工作签证
-- IT/技术：IT、软件、数据等技术类职位
-- 餐饮/酒店：餐饮、酒店、旅游服务业
-- 零售/销售：零售、销售、客户顾问
-- 制造/物流：生产制造、物流仓储
-- 金融/会计：银行、保险、会计审计
-- 教育/培训：教育、培训、学校
-- 医疗/护理：医疗、护理、健康
-- 行政/文员：办公室行政、文员、内勤
-- 市场/传媒：市场营销、传媒、广告
-- 工程/技术：工程师、技术员
-- 家政/服务：家政、清洁、服务员
-- 客服/前台：客服、前台、接线员
+const TAG_CLASSIFY_PROMPT = `分析以下德国职位描述，输出适用标签。
 
 职位描述：
 {description_de}
 
-直接输出 JSON（禁止任何其他内容）：
-{"tags": ["标签1", "标签2"]}`;
+allowed tags: 需要中文, 无语言要求, 英语即可, 留学生适合, 华人优先, 无经验可, 远程可选, 迷你岗, 实习岗, 可办工作签证, IT/技术, 餐饮/酒店, 零售/销售, 制造/物流, 金融/会计, 教育/培训, 医疗/护理, 行政/文员, 市场/传媒, 工程/技术, 家政/服务, 客服/前台
+
+输出格式：只输出标签，逗号分隔，不要任何解释。
+示例输出：留学生适合, IT/技术, 远程可选
+示例输出：无语言要求, 迷你岗
+示例输出：餐饮/酒店, 零售/销售`;
 
 // --- Translation Logic ---
 
@@ -228,27 +206,21 @@ async function classifyJobTags(descriptionDe) {
 
   const text = await generateMiniMaxText({
     prompt,
-    system: "输出规范：你是一个JSON生成器。只输出一个JSON对象，格式为{\"tags\":[\"标签1\",\"标签2\"]}，不要输出任何其他内容。不要解释，不要思考，不要换行，不要代码块标记。",
-    maxTokens: 300,
+    system: "你是一个标签分类器。只输出标签，逗号分隔。不要输出任何解释、文字说明或思考过程。",
+    maxTokens: 200,
     temperature: 0.1,
   });
 
-  try {
-    const parsed = JSON.parse(extractJson(text));
-    const rawTags = Array.isArray(parsed.tags) ? parsed.tags : [];
-    const validTags = rawTags.filter((t) => VALID_TAGS.has(t));
-    if (validTags.length === 0 && rawTags.length > 0) {
-      console.warn(`[TAG] classifyJobTags: invalid tags ${JSON.stringify(rawTags)}, filtered to []`);
-    }
-    if (validTags.length === 0) {
-      // Log the raw response for debugging
-      console.warn(`[TAG] classifyJobTags: no valid tags returned. raw response: ${text.slice(0, 300)}`);
-    }
-    return validTags;
-  } catch {
-    console.warn(`[TAG] classifyJobTags: JSON parse failed. raw: ${text.slice(0, 300)}`);
-    return [];
+  // Parse comma-separated tags from plain text response
+  const rawTags = text
+    .split(/[,，]/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && t.length <= 10);
+  const validTags = rawTags.filter((t) => VALID_TAGS.has(t));
+  if (validTags.length === 0 && rawTags.length > 0) {
+    console.warn(`[TAG] classifyJobTags: invalid tags ${JSON.stringify(rawTags)}, filtered to []`);
   }
+  return validTags;
 }
 
 // --- Queue Processing ---
