@@ -198,9 +198,46 @@ const VALID_TAGS = new Set([
   "家政/服务", "客服/前台",
 ]);
 
+// --- Job Tag Keyword Matching (fallback) ---
+const TAG_KEYWORDS = [
+  ["需要中文", ["chinesisch", "chinese", "mandarin", "中文", "中国业务", "中国相关"]],
+  ["无语言要求", ["ohne sprachkenntnisse", "keine sprachkenntnisse", "kein deutsch", "no german", "ohne sprach"]],
+  ["英语即可", ["englisch", "english", "gute englisch", "good english", "englische"]],
+  ["留学生适合", ["werkstudent", "student", "studium", "praktikum", "ausbildung", "学生", "实习生", "兼职"]],
+  ["华人优先", ["chinesischsprachig", "china-", "chinesische"]],
+  ["无经验可", ["ohne berufserfahrung", "berufseinsteiger", "einsteiger", "quereinsteiger", "无经验", "无需经验"]],
+  ["远程可选", ["homeoffice", "remote", "fernarbeit", "mobiles arbeiten", "von zu hause", "远程", "居家"]],
+  ["迷你岗", ["geringfügig", "538 euro", "450 euro", "minijob", "迷你"]],
+  ["实习岗", ["praktikum", "ausbildungs", "intern", "实习"]],
+  ["可办工作签证", ["arbeitnehmererlaubnis", "visum", "工作签证", "工作许可"]],
+  ["IT/技术", ["it-", "software", "developer", "programmier", "it-support", "datenbank", "cloud", "aws", "python", "java", "javascript", "sql", "linux", "docker", "kubernetes", "devops", " Fullstack", "frontend", "backend", "web-entwickler", "IT", "计算机", "软件", "开发"]],
+  ["餐饮/酒店", ["gastronomi", "hotel", "restaurant", "koch", "bedienung", "餐饮", "酒店", "厨师", "服务员"]],
+  ["零售/销售", ["verkauf", "verkäufer", "einzelhandel", "retail", "kundenberatung", "销售", "零售", "营业员"]],
+  ["制造/物流", ["produktion", "lager", "logistik", "fertigung", "制造", "物流", "仓库", "生产线"]],
+  ["金融/会计", ["buchhaltung", "finanz", "bank", "steuer", "会计", "金融", "财务", "银行"]],
+  ["教育/培训", ["bildung", "schule", "lehre", "ausbild", "教育", "培训", "学校", "教师"]],
+  ["医疗/护理", ["gesundheit", "pflege", "medizin", "krankenhaus", "医疗", "护理", "护士", "医院"]],
+  ["行政/文员", ["büro", "verwaltung", "sekretär", "administr", "行政", "文员", "办公室", "内勤"]],
+  ["市场/传媒", ["marketing", "medien", "kommunikation", "content", "市场", "传媒", "营销", "广告"]],
+  ["工程/技术", ["ingenieur", "techniker", "technisch", "engineering", "工程", "技术员"]],
+  ["家政/服务", ["reinigung", "reinig", "haushalt", "服务", "清洁", "家政"]],
+  ["客服/前台", ["kundenservice", "rezeption", "callcenter", "hotline", "客服", "前台", "接线员"]],
+];
+
+function detectTagsByKeywords(description) {
+  const text = (description || "").toLowerCase();
+  const tags = [];
+  for (const [tag, kws] of TAG_KEYWORDS) {
+    if (kws.some((kw) => text.includes(kw))) {
+      tags.push(tag);
+    }
+  }
+  return tags;
+}
+
 async function classifyJobTags(descriptionDe) {
   if (!descriptionDe || descriptionDe.trim().length < 20) {
-    return [];
+    return detectTagsByKeywords(descriptionDe);
   }
   const prompt = TAG_CLASSIFY_PROMPT.replace("{description_de}", descriptionDe.slice(0, 8000));
 
@@ -215,10 +252,16 @@ async function classifyJobTags(descriptionDe) {
   const rawTags = text
     .split(/[,，]/)
     .map((t) => t.trim())
-    .filter((t) => t.length > 0 && t.length <= 10);
+    .filter((t) => t.length > 0 && t.length <= 15);
   const validTags = rawTags.filter((t) => VALID_TAGS.has(t));
-  if (validTags.length === 0 && rawTags.length > 0) {
-    console.warn(`[TAG] classifyJobTags: invalid tags ${JSON.stringify(rawTags)}, filtered to []`);
+  if (validTags.length === 0) {
+    // Fallback to keyword matching
+    const kwTags = detectTagsByKeywords(descriptionDe);
+    if (kwTags.length > 0) {
+      console.warn(`[TAG] classifyJobTags: model failed, falling back to keywords: ${kwTags.join(",")}`);
+      return kwTags;
+    }
+    console.warn(`[TAG] classifyJobTags: no valid tags (model: ${text.slice(0, 100)})`);
   }
   return validTags;
 }
