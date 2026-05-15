@@ -88,25 +88,11 @@ def classify_work_type(arbeitszeit_codes: list[str]) -> list[str]:
 
 
 def keyword_to_tags(keyword: str) -> list[str]:
-    """根据搜索关键词推断华人特供标签"""
-    tags = []
-    kw = keyword.lower()
-    if kw in ("w", "werkstudent"):
-        tags.append("留学生适合")
-    if kw in ("p", "praktikum", "praktika"):
-        tags.append("实习岗")
-    if kw in ("a", "ausbildung"):
-        tags.append("实习岗")
-        tags.append("无经验可")
-    if kw in ("chinesisch", "mandarin", "chinese"):
-        tags.append("需要中文")
-    if kw in ("english",):
-        tags.append("英语即可")
-    if kw in ("informatik", "software", "data"):
-        tags.append("IT/技术")
-    if kw in ("international",):
-        tags.append("留学生适合")
-    return list(dict.fromkeys(tags))  # dedupe while preserving order
+    """
+    占位函数。标签现在由 translation-worker.mjs 调用 MiniMax AI 分类后写入。
+    此函数始终返回空列表，避免关键词匹配产生不准确标签。
+    """
+    return []
 
 
 def detect_job_tags(job: dict[str, Any]) -> list[str]:
