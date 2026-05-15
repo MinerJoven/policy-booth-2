@@ -8,6 +8,11 @@ on:
         required: false
         default: '0'
         type: string
+      force:
+        description: 'Force re-fetch descriptions even if already present'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   sync-details:
@@ -32,5 +37,7 @@ jobs:
         run: |
           LIMIT="${{ inputs.limit }}"
           if [ -z "$LIMIT" ]; then LIMIT="0"; fi
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
           cd scripts/python
-          python ba_job_detail_sync.py --limit="$LIMIT" --delay=0.3
+          python ba_job_detail_sync.py --limit="$LIMIT" --delay=0.3 $FORCE_FLAG

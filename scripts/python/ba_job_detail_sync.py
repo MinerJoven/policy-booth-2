@@ -84,6 +84,7 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="限制抓取数量（0=全部）")
     parser.add_argument("--dry-run", action="store_true", help="只打印不写入")
     parser.add_argument("--delay", type=float, default=0.3, help="每次请求间隔（秒）")
+    parser.add_argument("--force", action="store_true", help="强制重新抓取所有描述（即使已有）")
     args = parser.parse_args()
 
     supabase = get_supabase()
@@ -106,7 +107,8 @@ def main():
         refnr = job["refnr"]
         existing_desc = job.get("description_de")
 
-        if existing_desc and len(existing_desc.strip()) > 50:
+        # --force 时跳过检查；否则有描述就跳过（已有足够的摘要）
+        if existing_desc and len(existing_desc.strip()) > 50 and not args.force:
             # 已有描述，跳过抓取，但仍入队让翻译 worker 做 AI 标签分类
             # 只入队还没有待处理标签任务的职位
             skipped += 1
