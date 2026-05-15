@@ -133,6 +133,19 @@ def main():
             ).eq("refnr", refnr).execute()
             print(f"  [OK] {refnr}: {len(desc)} chars, work_type={work_type}")
             fetched += 1
+
+            # 入队：让 translation worker 做 AI 翻译 + 标签分类
+            # 先删后插，确保不因唯一约束冲突失败
+            supabase.table("translation_queue").delete().eq("source_type", "job").eq("source_id", refnr).execute()
+            supabase.table("translation_queue").insert(
+                {
+                    "source_type": "job",
+                    "source_id": refnr,
+                    "status": "pending",
+                    "priority": 1,
+                    "attempts": 0,
+                }
+            ).execute()
         except Exception as e:
             print(f"  [ERR] {refnr}: {e}")
             errors += 1
