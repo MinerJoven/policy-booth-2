@@ -223,9 +223,6 @@ def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
     deactivated = 0
 
     for refnr, job in all_jobs.items():
-        # DEBUG: print first 3 jobs' tags
-        if upserted < 3:
-            print(f"[DEBUG] refnr={refnr} tags={job.get('tags', [])}", file=sys.stderr)
         try:
             table.upsert(job, on_conflict="refnr").execute()
             upserted += 1

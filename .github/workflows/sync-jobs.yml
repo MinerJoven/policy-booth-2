@@ -35,3 +35,20 @@ jobs:
         run: |
           cd scripts/python
           python ba_job_sync.py ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
+
+      - name: Verify tags in DB
+        if: inputs.dry_run != 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python -c "
+import os
+from supabase import create_client
+url = os.environ['SUPABASE_URL']
+key = os.environ['SUPABASE_SERVICE_ROLE_KEY']
+supabase = create_client(url, key)
+resp = supabase.table('jobs').select('refnr,tags').eq('is_active', True).limit(5).execute()
+for j in resp.data:
+    print(f\"refnr={j['refnr']} tags={j.get('tags', [])}\")
+"
