@@ -37,7 +37,5 @@ jobs:
         run: |
           LIMIT="${{ inputs.limit }}"
           if [ -z "$LIMIT" ]; then LIMIT="0"; fi
-          FORCE_FLAG=""
-          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
           cd scripts/python
-          python ba_job_detail_sync.py --limit="$LIMIT" --delay=0.3 $FORCE_FLAG
+          python ba_job_detail_sync.py --limit="$LIMIT" --delay=0.3 --force
