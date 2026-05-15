@@ -240,10 +240,15 @@ async function classifyJobTags(descriptionDe) {
     const rawTags = Array.isArray(parsed.tags) ? parsed.tags : [];
     const validTags = rawTags.filter((t) => VALID_TAGS.has(t));
     if (validTags.length === 0 && rawTags.length > 0) {
-      console.warn(`[TAG] classifyJobTags: model returned invalid tags ${JSON.stringify(rawTags)}, filtered to []`);
+      console.warn(`[TAG] classifyJobTags: invalid tags ${JSON.stringify(rawTags)}, filtered to []`);
+    }
+    if (validTags.length === 0) {
+      // Log the raw response for debugging
+      console.warn(`[TAG] classifyJobTags: no valid tags returned. raw response: ${text.slice(0, 300)}`);
     }
     return validTags;
   } catch {
+    console.warn(`[TAG] classifyJobTags: JSON parse failed. raw: ${text.slice(0, 300)}`);
     return [];
   }
 }
