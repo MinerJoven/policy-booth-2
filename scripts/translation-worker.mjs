@@ -122,9 +122,9 @@ const JOB_PROMPT = `将以下德语职位信息翻译为中文：
   "brief_zh": "两句话中文摘要（≤50字，描述核心职责和要求）"
 }`;
 
-const TAG_CLASSIFY_PROMPT = `你是一个德国招聘信息分类专家。仔细阅读以下职位描述，判断它最适合哪些分类标签。
+const TAG_CLASSIFY_PROMPT = `分析以下德国职位描述，输出 JSON 格式的标签数组。
 
-要求：只要职位描述中有相关信息，就应打上对应标签。不要保守估计，优先打上所有适用的标签。
+要求：直接输出 JSON，不要任何解释、文字说明或思考过程。只输出一个 JSON 对象。
 
 允许的标签（只能从中选择，可以选多个）：
 - 需要中文：职位要求会中文，或工作内容涉及中国相关业务
@@ -153,10 +153,8 @@ const TAG_CLASSIFY_PROMPT = `你是一个德国招聘信息分类专家。仔细
 职位描述：
 {description_de}
 
-输出 JSON（严格 JSON，不要输出任何其他内容）：
-{
-  "tags": ["标签1", "标签2", ...]
-}`;
+直接输出 JSON（禁止任何其他内容）：
+{"tags": ["标签1", "标签2"]}`;
 
 // --- Translation Logic ---
 
@@ -230,7 +228,7 @@ async function classifyJobTags(descriptionDe) {
 
   const text = await generateMiniMaxText({
     prompt,
-    system: "你是严谨的德国招聘信息分类专家。严格按JSON格式输出，只返回tags数组，不要输出任何其他内容。",
+    system: "输出规范：你是一个JSON生成器。只输出一个JSON对象，格式为{\"tags\":[\"标签1\",\"标签2\"]}，不要输出任何其他内容。不要解释，不要思考，不要换行，不要代码块标记。",
     maxTokens: 300,
     temperature: 0.1,
   });
