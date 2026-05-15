@@ -1,0 +1,36 @@
+name: Sync Job Details (on-demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Limit number of jobs (0 = all)'
+        required: false
+        default: '0'
+        type: string
+
+jobs:
+  sync-details:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install httpx supabase
+
+      - name: Sync BA Job Details
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BA_API_KEY: ${{ secrets.BA_API_KEY }}
+        run: |
+          LIMIT="${{ inputs.limit }}"
+          if [ -z "$LIMIT" ]; then LIMIT="0"; fi
+          cd scripts/python
+          python ba_job_detail_sync.py --limit="$LIMIT" --delay=0.3
