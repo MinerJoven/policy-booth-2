@@ -107,10 +107,20 @@ def main():
         existing_desc = job.get("description_de")
 
         if existing_desc and len(existing_desc.strip()) > 50:
-            # 已有描述，跳过（但计入已处理）
+            # 已有描述，跳过抓取，但仍入队让翻译 worker 做 AI 标签分类
+            # 只入队还没有待处理标签任务的职位
             skipped += 1
             if (i + 1) % 20 == 0:
                 print(f"  [{i+1}/{len(jobs)}] 跳过（已有描述）: {refnr}")
+            if not args.dry_run:
+                try:
+                    supabase.table("translation_queue").delete().eq("source_type", "job").eq("source_id", refnr).execute()
+                    supabase.table("translation_queue").insert({
+                        "source_type": "job", "source_id": refnr,
+                        "status": "pending", "priority": 1, "attempts": 0,
+                    }).execute()
+                except Exception:
+                    pass  # 忽略入队错误，不影响主流程
             continue
 
         desc, work_type = fetch_job_detail(refnr)
