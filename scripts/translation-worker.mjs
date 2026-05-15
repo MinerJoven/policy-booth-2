@@ -266,7 +266,8 @@ async function processQueue() {
             .update({ ...translated, updated_at: new Date().toISOString() })
             .eq("id", item.source_id);
 
-        } else if (item.source_type === "job") {
+        let jobTags = [];
+        if (item.source_type === "job") {
           const { data: job } = await supabase
             .from(V2_JOBS_TABLE)
             .select("refnr, title_de, description_de")
@@ -275,12 +276,12 @@ async function processQueue() {
 
           if (!job) throw new Error(`Job ${item.source_id} not found`);
 
-          // 翻译 + AI 标签分类并行执行
           const [translated, tags] = await Promise.all([
             translateJob(job),
             classifyJobTags(job.description_de || ""),
           ]);
 
+          jobTags = tags;
           await supabase
             .from(V2_JOBS_TABLE)
             .update({ ...translated, tags, updated_at: new Date().toISOString() })
@@ -292,7 +293,7 @@ async function processQueue() {
           .update({ status: "done", processed_at: new Date().toISOString() })
           .eq("id", item.id);
 
-        console.log(`[OK] ${item.source_type} ${item.source_id} | tags=${tags?.join(",") ?? "n/a"}`);
+        console.log(`[OK] ${item.source_type} ${item.source_id}${item.source_type === "job" ? ` | tags=${jobTags?.join(",") ?? "n/a"}` : ""}`);
       } catch (err) {
         const attempts = (item.attempts || 0) + 1;
         const newStatus = attempts >= MAX_RETRIES ? "failed" : "pending";
