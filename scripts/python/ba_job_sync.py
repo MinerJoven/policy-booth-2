@@ -123,8 +123,12 @@ def normalize_job(raw: dict[str, Any]) -> dict[str, Any]:
         ort = raw["arbeitsort"]
         city = ort.get("ort", ort.get("stadt", "")) or ""
 
-    # 州代码
-    state_code = raw.get("region", "") or raw.get("arbeitsmarktdaten", {}).get("bundesland", "") or ""
+    # 州代码 — BA API 在 arbeitsort.region（不在顶层 raw.region）
+    state_code = (
+        raw.get("arbeitsort", {}).get("region", "")
+        or raw.get("region", "")
+        or ""
+    )
 
     # 发布时间
     published_at = None
