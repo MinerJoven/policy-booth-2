@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, MapPin, Clock } from "lucide-react";
+import { ArrowRight, MapPin, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Suspense } from "react";
 import { listJobsData, parseJobFiltersFromUrl } from "@/lib/data-v2";
-import { SearchBar } from "@/components/search/SearchBar";
-import { CATEGORIES, GERMAN_STATES, JOB_TAGS, SITE_NAME, WORK_TYPES } from "@/lib/constants";
+import { JobsFilters } from "@/components/jobs/JobsFilters";
+import { SITE_NAME } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -28,6 +29,11 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   );
   const result = await listJobsData(filters);
 
+  const { page, pageSize, total } = result;
+  const totalPages = Math.ceil(total / pageSize);
+  const from = total > 0 ? (page - 1) * pageSize + 1 : 0;
+  const to = Math.min(page * pageSize, total);
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-8">
       {/* Header */}
@@ -37,39 +43,17 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           德国联邦劳动局（BA）Jobbörse 职位库实时同步，带中文翻译和华人特供标签。
         </p>
         <div className="mt-5 max-w-3xl">
-          <SearchBar />
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="mt-6 flex flex-wrap gap-3">
-        <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm">
-          <option value="">所有州</option>
-          {GERMAN_STATES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm">
-          <option value="">所有工作类型</option>
-          {WORK_TYPES.map((w) => (
-            <option key={w.value} value={w.value}>{w.label}</option>
-          ))}
-        </select>
-        <div className="flex flex-wrap gap-2">
-          {JOB_TAGS.map((tag) => (
-            <span
-              key={tag.value}
-              className="cursor-pointer rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-policy-green hover:text-policy-green"
-            >
-              {tag.label}
-            </span>
-          ))}
+          <Suspense fallback={<div className="h-14 animate-pulse rounded-lg bg-neutral-100" />}>
+            <JobsFilters />
+          </Suspense>
         </div>
       </div>
 
       {/* Job Count */}
       <p className="mt-6 text-sm text-neutral-600">
-        共找到 <span className="font-semibold text-ink">{result.total}</span> 个职位
+        {total > 0
+          ? `显示第 ${from}–${to} 条，共 ${total} 个职位`
+          : `共找到 ${total} 个职位`}
       </p>
 
       {/* Job List */}
@@ -82,6 +66,11 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <PaginationLinks page={page} totalPages={totalPages} resolvedSearchParams={resolvedSearchParams ?? {}} />
+      )}
 
       {/* Sync Footer */}
       <p className="mt-8 text-center text-xs text-neutral-500">
@@ -156,5 +145,73 @@ function JobCard({ job }: { job: Awaited<ReturnType<typeof listJobsData>>["data"
         </Link>
       </div>
     </article>
+  );
+}
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function buildPageUrl(targetPage: number, resolvedSearchParams: SearchParams | undefined): string {
+  const params = new URLSearchParams();
+  const entries = Object.entries(resolvedSearchParams ?? {});
+  for (const [k, v] of entries) {
+    if (k === "page") continue;
+    if (Array.isArray(v)) {
+      for (const vi of v) params.append(k, vi);
+    } else if (v !== undefined) {
+      params.set(k, v);
+    }
+  }
+  params.set("page", String(targetPage));
+  return `/jobs?${params.toString()}`;
+}
+
+function PaginationLinks({
+  page,
+  totalPages,
+  resolvedSearchParams,
+}: {
+  page: number;
+  totalPages: number;
+  resolvedSearchParams: SearchParams;
+}) {
+  const prevUrl = buildPageUrl(page - 1, resolvedSearchParams);
+  const nextUrl = buildPageUrl(page + 1, resolvedSearchParams);
+
+  return (
+    <div className="mt-6 flex items-center justify-center gap-2">
+      {page > 1 ? (
+        <Link
+          href={prevUrl}
+          className="focus-ring inline-flex h-9 items-center gap-1 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-neutral-700 shadow-sm transition hover:border-policy-green hover:text-policy-green"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          上一页
+        </Link>
+      ) : (
+        <span className="inline-flex h-9 items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium text-neutral-400">
+          <ChevronLeft className="h-4 w-4" />
+          上一页
+        </span>
+      )}
+
+      <span className="px-3 text-sm text-neutral-600">
+        第 {page} / {totalPages} 页
+      </span>
+
+      {page < totalPages ? (
+        <Link
+          href={nextUrl}
+          className="focus-ring inline-flex h-9 items-center gap-1 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-neutral-700 shadow-sm transition hover:border-policy-green hover:text-policy-green"
+        >
+          下一页
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      ) : (
+        <span className="inline-flex h-9 items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium text-neutral-400">
+          下一页
+          <ChevronRight className="h-4 w-4" />
+        </span>
+      )}
+    </div>
   );
 }

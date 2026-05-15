@@ -58,6 +58,8 @@ export interface JobV2 {
   titleDe: string;
   titleZh?: string;
   briefZh?: string;
+  descriptionDe?: string;   // BA 详情页原始德语大段描述
+  descriptionZh?: string;  // description_de 中文翻译
   employer: string;
   city: string;
   stateCode: string;

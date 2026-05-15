@@ -9,25 +9,28 @@ export const SITE_DESCRIPTION = "面向在德华人的政策信息与就业资�
 // --- 地区层级 ---
 export const REGION_LEVELS = ["联邦", "州", "市", "Landkreis"] as const;
 
-// --- 德国各州 ---
-export const GERMAN_STATES = [
-  "Baden-Württemberg",
-  "Bayern",
-  "Berlin",
-  "Brandenburg",
-  "Bremen",
-  "Hamburg",
-  "Hessen",
-  "Mecklenburg-Vorpommern",
-  "Niedersachsen",
-  "Nordrhein-Westfalen",
-  "Rheinland-Pfalz",
-  "Saarland",
-  "Sachsen",
-  "Sachsen-Anhalt",
-  "Schleswig-Holstein",
-  "Thüringen",
-] as const;
+// --- 德国各州（中文名 -> 德语名映射）---
+export const GERMAN_STATES_DISPLAY: { label: string; value: string }[] = [
+  { label: "巴登-符腾堡", value: "Baden-Württemberg" },
+  { label: "巴伐利亚",    value: "Bayern" },
+  { label: "柏林",        value: "Berlin" },
+  { label: "勃兰登堡",    value: "Brandenburg" },
+  { label: "不来梅",      value: "Bremen" },
+  { label: "汉堡",        value: "Hamburg" },
+  { label: "黑森",        value: "Hessen" },
+  { label: "梅克伦堡-前波美拉尼亚", value: "Mecklenburg-Vorpommern" },
+  { label: "下萨克森",    value: "Niedersachsen" },
+  { label: "北莱茵-威斯特法伦", value: "Nordrhein-Westfalen" },
+  { label: "莱茵兰-普法尔茨", value: "Rheinland-Pfalz" },
+  { label: "萨尔兰州",    value: "Saarland" },
+  { label: "萨克森",      value: "Sachsen" },
+  { label: "萨克森-安哈尔特", value: "Sachsen-Anhalt" },
+  { label: "石勒苏益格-荷尔斯泰因", value: "Schleswig-Holstein" },
+  { label: "图林根",      value: "Thüringen" },
+];
+
+// 兼容旧代码（德语名，用于 URL 参数值）
+export const GERMAN_STATES = GERMAN_STATES_DISPLAY.map((s) => s.value);
 
 // 州代码映射
 export const STATE_CODE_MAP: Record<string, string> = {
@@ -67,10 +70,33 @@ export const CATEGORIES = [
 
 // --- 华人特有招聘标签 ---
 export const JOB_TAGS = [
-  { value: "需要中文",   label: "需要中文" },     // 职位含 Chinesisch/Mandarin/Chinese
-  { value: "留学生适合", label: "留学生适合" },   // Werkstudent 或 Praktikum
-  { value: "远程办公",   label: "远程办公" },     // arbeitszeit 含远程
-  { value: "无语言要求", label: "无语言要求" },   // English OK / no German required
+  // 语言要求
+  { value: "需要中文",   label: "需要中文" },
+  { value: "无语言要求", label: "无语言要求" },
+  { value: "英语即可",   label: "英语即可" },
+  // 适合人群
+  { value: "留学生适合", label: "留学生适合" },
+  { value: "华人优先",   label: "华人优先" },
+  { value: "无经验可",   label: "无经验可" },
+  // 工作条件
+  { value: "远程可选",   label: "远程可选" },
+  { value: "迷你岗",     label: "迷你岗" },
+  { value: "实习岗",     label: "实习岗" },
+  // 签证相关
+  { value: "可办工作签证", label: "可办工作签证" },
+  // 职业领域
+  { value: "IT/技术",     label: "IT/技术" },
+  { value: "餐饮/酒店",   label: "餐饮/酒店" },
+  { value: "零售/销售",   label: "零售/销售" },
+  { value: "制造/物流",   label: "制造/物流" },
+  { value: "金融/会计",   label: "金融/会计" },
+  { value: "教育/培训",   label: "教育/培训" },
+  { value: "医疗/护理",   label: "医疗/护理" },
+  { value: "行政/文员",   label: "行政/文员" },
+  { value: "市场/传媒",   label: "市场/传媒" },
+  { value: "工程/技术",   label: "工程/技术" },
+  { value: "家政/服务",   label: "家政/服务" },
+  { value: "客服/前台",   label: "客服/前台" },
 ] as const;
 
 // --- 工作类型 ---

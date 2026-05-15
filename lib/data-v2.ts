@@ -84,6 +84,8 @@ type JobRow = {
   title_de: string;
   title_zh: string | null;
   brief_zh: string | null;
+  description_de: string | null;  // BA 详情页原始德语大段描述
+  description_zh: string | null;  // description_de 中文翻译
   employer: string;
   city: string;
   state_code: string;
@@ -138,6 +140,8 @@ function rowToJobV2(r: JobRow): JobV2 {
     titleDe: r.title_de,
     titleZh: r.title_zh ?? undefined,
     briefZh: r.brief_zh ?? undefined,
+    descriptionDe: r.description_de ?? undefined,
+    descriptionZh: r.description_zh ?? undefined,
     employer: r.employer,
     city: r.city,
     stateCode: r.state_code,
@@ -284,7 +288,6 @@ export async function listJobsData(
     let query = client
       .from(getV2JobsTableName())
       .select("*", { count: "exact" })
-      .eq("translated", true)
       .eq("is_active", true);
 
     if (filters.city)         query = query.eq("city", filters.city);
@@ -326,10 +329,12 @@ export async function getJobByRefnrData(refnr: string): Promise<JobV2 | null> {
       .from(getV2JobsTableName())
       .select("*")
       .eq("refnr", refnr)
+      .eq("is_active", true)
       .maybeSingle();
     if (error || !data) return null;
     return rowToJobV2(data as JobRow);
-  } catch {
+  } catch (e) {
+    console.error("[getJobByRefnrData] error:", e);
     return null;
   }
 }

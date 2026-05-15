@@ -87,26 +87,43 @@ def classify_work_type(arbeitszeit_codes: list[str]) -> list[str]:
     return result if result else []
 
 
+def keyword_to_tags(keyword: str) -> list[str]:
+    """根据搜索关键词推断华人特供标签"""
+    tags = []
+    kw = keyword.lower()
+    if kw in ("w", "werkstudent"):
+        tags.append("留学生适合")
+    if kw in ("p", "praktikum", "praktika"):
+        tags.append("实习岗")
+    if kw in ("a", "ausbildung"):
+        tags.append("实习岗")
+        tags.append("无经验可")
+    if kw in ("chinesisch", "mandarin", "chinese"):
+        tags.append("需要中文")
+    if kw in ("english",):
+        tags.append("英语即可")
+    if kw in ("informatik", "software", "data"):
+        tags.append("IT/技术")
+    if kw in ("international",):
+        tags.append("留学生适合")
+    return list(dict.fromkeys(tags))  # dedupe while preserving order
+
+
 def detect_job_tags(job: dict[str, Any]) -> list[str]:
-    """检测华人特供标签"""
+    """检测职位描述中的关键词标签（需要详情数据）"""
     tags = []
     text = json.dumps(job).lower()
 
-    # 需要中文
     if any(kw in text for kw in ["chinesisch", "mandarin", "chinese"]):
         tags.append("需要中文")
-
-    # 留学生适合
-    if "werkstudent" in text or "praktikum" in text:
-        tags.append("留学生适合")
-
-    # 远程
     if any(kw in text for kw in ["heimarbeit", "homeoffice", "remote", "fernarbeit"]):
-        tags.append("远程办公")
-
-    # 无语言要求
+        tags.append("远程可选")
     if any(kw in text for kw in ["english ok", "no german", "german not required", "keine deutschkenntnisse"]):
         tags.append("无语言要求")
+    if any(kw in text for kw in ["werkstudent"]):
+        tags.append("留学生适合")
+    if any(kw in text for kw in ["praktikum", "ausbildung"]):
+        tags.append("实习岗")
 
     return tags
 
@@ -161,11 +178,12 @@ def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
     """
     主同步流程：
     1. 并发拉取多个关键词下的近7天岗位
-    2. 按 refnr 去重
+    2. 按 refnr 去重，同一职位合并关键词标签
     3. upsert 写入 jobs 表
     4. 检测下架
     """
-    all_jobs: dict[str, dict] = {}
+    all_jobs: dict[str, dict] = {}       # refnr -> normalized job
+    all_keywords: dict[str, set[str]] = {}  # refnr -> set of keywords that found it
 
     for keyword in JOB_KEYWORDS:
         try:
@@ -173,10 +191,23 @@ def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
             stellenangebote = result.get("stellenangebote", [])
             for item in stellenangebote:
                 refnr = str(item.get("refnr", "")) or str(item.get("arbeitsmarktdaten", {}).get("refnr", ""))
-                if refnr and refnr not in all_jobs:
+                if not refnr:
+                    continue
+                if refnr not in all_jobs:
                     all_jobs[refnr] = normalize_job(item)
+                    all_keywords[refnr] = set()
+                all_keywords[refnr].add(keyword)
         except Exception as e:
             print(f"[WARN] Failed to fetch keyword '{keyword}': {e}", file=sys.stderr)
+
+    # 合并关键词标签
+    for refnr, kws in all_keywords.items():
+        keyword_tags: list[str] = []
+        for kw in kws:
+            keyword_tags.extend(keyword_to_tags(kw))
+        existing = all_jobs[refnr]["tags"]
+        merged = list(dict.fromkeys(existing + keyword_tags))  # dedupe, existing first
+        all_jobs[refnr]["tags"] = merged
 
     print(f"Fetched {len(all_jobs)} unique jobs from BA API")
 

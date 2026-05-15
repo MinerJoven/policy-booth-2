@@ -34,7 +34,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         ← <a href="/jobs" className="hover:text-policy-blue">返回招聘列表</a>
       </div>
 
-      {/* Header */}
+      {/* Header Card */}
       <div className="rounded-lg border border-line bg-white p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -97,6 +97,21 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             <p className="mt-2 text-sm leading-6 text-neutral-700">{job.briefZh}</p>
           </div>
         )}
+
+        {/* 完整描述 */}
+        {(job.descriptionZh || job.descriptionDe) && (
+          <div className="mt-6 border-t border-line pt-4">
+            <h2 className="text-sm font-semibold text-ink">职位详情</h2>
+            <div className="mt-2 text-sm leading-7 text-neutral-700 whitespace-pre-wrap">
+              {job.descriptionZh || job.descriptionDe}
+            </div>
+            {job.descriptionDe && !job.descriptionZh && (
+              <p className="mt-2 text-xs text-amber-600">
+                ⚠️ 此为德语原文，中文翻译稍后提供
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Action */}
@@ -111,6 +126,24 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           <ExternalLink className="h-4 w-4" />
           <ArrowRight className="h-4 w-4" />
         </a>
+        <p className="mt-2 text-xs text-neutral-500">
+          职位编号（Refnr）：<span className="font-mono font-semibold">{job.refnr}</span>
+        </p>
+      </div>
+
+      {/* How to apply guide */}
+      <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <h3 className="text-sm font-semibold text-blue-800">如何投递？</h3>
+        <p className="mt-1 text-sm text-blue-700">
+          点击上方按钮后，劳动局官网会跳转到搜索页。请在搜索框中输入上方显示的 <strong>职位编号</strong>，然后点击&quot;Stellen finden&quot;即可直达申请页面：
+        </p>
+        <div className="mt-3">
+          <img
+            src="/images/jobs/ba-job-id-search.webp"
+            alt="在劳动局官网搜索框输入职位编号示意图"
+            className="max-w-full rounded-lg border border-blue-200"
+          />
+        </div>
       </div>
 
       {/* Disclaimer */}

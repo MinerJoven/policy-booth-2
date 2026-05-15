@@ -94,6 +94,10 @@ CREATE TABLE IF NOT EXISTS jobs (
   -- 华人特供标签
   tags              TEXT[] NOT NULL DEFAULT '{}',    -- 如 ["留学生适合","需要中文","远程办公"]
 
+  -- 职位详情大段描述
+  description_de    TEXT,                           -- BA 详情页原始德语描述（公司介绍/职责/要求/福利）
+  description_zh    TEXT,                           -- description_de 中文翻译
+
   -- 来源
   source_url        TEXT NOT NULL,                   -- BA 原始详情页链接
   published_at      DATE,                           -- BA 平台上架日期
