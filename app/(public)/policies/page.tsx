@@ -3,15 +3,31 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FilterPanel } from "@/components/filter/FilterPanel";
 import { PolicyCard } from "@/components/policy/PolicyCard";
 import { SearchBar } from "@/components/search/SearchBar";
-import { parseFiltersFromSearchParams, listPoliciesData } from "@/lib/data";
+import { listPoliciesData } from "@/lib/data-v2";
+import { getSingleParam, toPositiveInt } from "@/lib/utils";
 
 interface PoliciesPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
+function parseFilters(searchParams: Record<string, string | string[] | undefined>) {
+  const page = toPositiveInt(getSingleParam(searchParams?.page), 1);
+  const pageSize = toPositiveInt(getSingleParam(searchParams?.page_size), 20);
+  return {
+    regionLevel: getSingleParam(searchParams?.region_level),
+    regionName: getSingleParam(searchParams?.region_name),
+    category: getSingleParam(searchParams?.category),
+    tags: searchParams?.tag ? (Array.isArray(searchParams.tag) ? searchParams.tag : [searchParams.tag]) : undefined,
+    sort: getSingleParam(searchParams?.sort) as "last_fetched" | "view_count" | undefined,
+    query: getSingleParam(searchParams?.q),
+    page,
+    pageSize,
+  };
+}
+
 export default async function PoliciesPage({ searchParams }: PoliciesPageProps) {
   const resolvedSearchParams = await searchParams;
-  const filters = parseFiltersFromSearchParams(resolvedSearchParams);
+  const filters = parseFilters(resolvedSearchParams ?? {});
   const result = await listPoliciesData(filters);
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
@@ -20,7 +36,7 @@ export default async function PoliciesPage({ searchParams }: PoliciesPageProps) 
       <div className="border-b border-line pb-6">
         <h1 className="text-3xl font-semibold text-ink">政策库</h1>
         <p className="mt-2 max-w-3xl text-base leading-7 text-neutral-600">
-          按地区、主题、适用人群和发布时间筛选德国官方政策中文整理内容。
+          按地区、主题、适用人群筛选德国官方政策中文整理内容。
         </p>
         <div className="mt-5 max-w-3xl">
           <SearchBar compact defaultValue={filters.query ?? ""} />

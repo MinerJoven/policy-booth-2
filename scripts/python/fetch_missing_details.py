@@ -55,10 +55,13 @@ def main():
     args = parser.parse_args()
 
     print("读取缺失 description_de 的职位...")
+    # Fetch BOTH deferred (is_active=FALSE) and active (is_active=TRUE) jobs missing details.
+    # Deferred jobs (from --defer-activate) have is_active=FALSE and need details.
+    # Active jobs missing details (legacy or edge case) also need details.
     sql = (
         "SELECT refnr, title_de FROM jobs "
-        "WHERE (description_de IS NULL OR LENGTH(description_de) <= 20) "
-        "AND is_active = true ORDER BY refnr"
+        "WHERE description_de IS NULL OR LENGTH(description_de) <= 20 "
+        "ORDER BY is_active ASC, refnr"
     )
     if args.limit > 0:
         sql += f" LIMIT {args.limit}"

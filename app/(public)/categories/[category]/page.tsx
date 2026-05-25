@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { listPoliciesData } from "@/lib/data-v2";
 import { PolicyCard } from "@/components/policy/PolicyCard";
 import { CATEGORIES } from "@/lib/constants";
-import { listPoliciesData } from "@/lib/data";
 
 interface CategoryPageProps {
   params: Promise<{ category: string }>;
@@ -29,7 +29,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   const result = await listPoliciesData({ category: decoded, pageSize: 20 });
   const regions = [...new Set(result.data.map((policy) => policy.regionName))];
-  const targetGroups = [...new Set(result.data.flatMap((policy) => policy.targetGroups))];
+  const tags = [...new Set(result.data.flatMap((policy) => policy.tags ?? []))];
 
   return (
     <section className="mx-auto max-w-7xl px-5 py-8">
@@ -41,15 +41,15 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <div className="grid gap-8 py-8 lg:grid-cols-[260px_1fr]">
         <aside className="space-y-6">
           <div className="rounded-lg border border-line bg-white p-4">
-            <h2 className="font-semibold text-ink">常见适用人群</h2>
+            <h2 className="font-semibold text-ink">相关标签</h2>
             <div className="mt-3 flex flex-wrap gap-2">
-              {targetGroups.map((group) => (
+              {tags.map((tag) => (
                 <Link
-                  key={group}
-                  href={`/policies?category=${encodeURIComponent(decoded)}&target_group=${encodeURIComponent(group)}`}
+                  key={tag}
+                  href={`/policies?category=${encodeURIComponent(decoded)}&tag=${encodeURIComponent(tag)}`}
                   className="rounded-lg border border-line bg-paper px-2.5 py-1 text-xs font-medium text-neutral-700 hover:border-policy-green"
                 >
-                  {group}
+                  {tag}
                 </Link>
               ))}
             </div>

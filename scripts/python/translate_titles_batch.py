@@ -6,25 +6,25 @@
 import os, sys, json, time, subprocess, tempfile, re, httpx
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def load_minimax_key() -> str:
+def load_deepseek_key() -> str:
     env_paths = [
-        os.path.expanduser("~/.hermes/profiles/dev/.env"),
         os.path.expanduser("~/.hermes/.env"),
     ]
     for path in env_paths:
         if os.path.exists(path):
             for line in open(path):
-                if "MINIMAX" in line and "API_KEY" in line and "=" in line:
+                if "DEEPSEEK_API_KEY" in line and "=" in line:
                     key = line.split("=", 1)[1].strip()
                     if key and key != "***":
                         return key
     return ""
 
-MINIMAX_KEY  = load_minimax_key()
-MINIMAX_BASE = os.environ.get("MINIMAX_BASE_URL", "https://api.minimaxi.com/anthropic")
+DEEPSEEK_KEY   = load_deepseek_key()
+DEEPSEEK_BASE  = "https://api.deepseek.com"
+DEEPSEEK_MODEL = "deepseek-v4-flash"
 BATCH_SIZE = 5
 DELAY = 12
-MAX_TOKENS = 1200
+MAX_TOKENS=1200
 
 SYSTEM_PROMPT = (
     "你是一个德国招聘信息翻译助手。把德语职位标题翻译成中文。\n"
@@ -76,7 +76,7 @@ def translate_batch(jobs: list[dict]) -> tuple[list[dict], list[dict]]:
              for i, j in enumerate(jobs, 1)]
     user_content = "\n\n".join(parts)
     payload = {
-        "model": "MiniMax-M2.7",
+        "model": DEEPSEEK_MODEL,
         "messages": [{"role": "system", "content": SYSTEM_PROMPT},
                      {"role": "user", "content": user_content}],
         "max_tokens": MAX_TOKENS,
@@ -84,16 +84,15 @@ def translate_batch(jobs: list[dict]) -> tuple[list[dict], list[dict]]:
     }
     try:
         resp = httpx.post(
-            f"{MINIMAX_BASE}/v1/messages",
-            headers={"Authorization": f"Bearer {MINIMAX_KEY}", "Content-Type": "application/json"},
+            f"{DEEPSEEK_BASE}/v1/chat/completions",
+            headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
             json=payload, timeout=45,
         )
         if resp.status_code != 200:
             print(f"  HTTP {resp.status_code}")
             return [], jobs
         data = resp.json()
-        content = data.get("content", [])
-        text = next((c.get("text", "") for c in content if c.get("type") == "text"), "") if isinstance(content, list) else str(content)
+        text = data["choices"][0]["message"]["content"]
         text = text.strip()
         if text.startswith("```"):
             lines = text.split("\n")

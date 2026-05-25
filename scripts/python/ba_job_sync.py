@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import hashlib
+import time
 import argparse
 from datetime import datetime, date, timedelta
 from typing import Any
@@ -29,6 +30,7 @@ HEADERS = {"X-API-Key": BA_API_KEY, "User-Agent": "policy-booth-2/1.0"}
 
 # 华人特供关键词
 JOB_KEYWORDS = [
+    # 原有 - 学生/中文/IT
     "Werkstudent",
     "Praktikum",
     "Ausbildung",
@@ -40,7 +42,34 @@ JOB_KEYWORDS = [
     "Data",
     "English",
     "International",
+    # 新增 - 餐饮/酒店
+    "Gastronomie",
+    "Küche",
+    "Hotel",
+    # 新增 - 护理
+    "Pflege",
+    # 新增 - 物流
+    "Logistik",
+    "Lager",
+    # 新增 - 零售
+    "Handel",
+    "Verkauf",
+    # 新增 - 生产/建筑
+    "Produktion",
+    "Bau",
+    "Elektro",
+    # 新增 - 服务
+    "Reinigung",
+    "Fahrer",
+    # 新增 - 文职
+    "Buchhaltung",
+    "Kundenservice",
+    "Vertrieb",
+    "Marketing",
 ]
+
+MAX_PAGES = 3       # 每个关键词翻几页
+PAGE_DELAY = 0.5    # 页间间隔（秒），避免限流
 
 # 工作类型映射 (arbeitszeit → 中文)
 WORK_TYPE_MAP = {
@@ -53,8 +82,12 @@ WORK_TYPE_MAP = {
 
 
 def get_supabase() -> Client:
-    url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SECRET_KEY")
+    # Support all common env var names: cron uses SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY,
+    # Next.js uses NEXT_PUBLIC_SUPABASE_URL/SUPABASE_SECRET_KEY
+    url = (os.environ.get("SUPABASE_URL")
+           or os.environ.get("NEXT_PUBLIC_SUPABASE_URL"))
+    key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+           or os.environ.get("SUPABASE_SECRET_KEY"))
     if not url or not key:
         raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
     return create_client(url, key)
@@ -149,31 +182,51 @@ def normalize_job(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
+def sync_jobs(supabase: Client, dry_run: bool = False, defer_activate: bool = False) -> dict[str, int]:
     """
     主同步流程：
-    1. 并发拉取多个关键词下的近7天岗位
-    2. 按 refnr 去重，同一职位合并关键词标签
+    1. 对每个关键词翻页 1-3 页（MAX_PAGES），拉取近7天岗位
+    2. 按 refnr 去重，同一职位合并关键词来源记录
     3. upsert 写入 jobs 表
     4. 检测下架
+
+    当 defer_activate=True 时：新职位 is_active=False（不展示），
+    已有活跃职位 is_active 不受影响。
+    后续由 pipeline 在翻译完成后统一激活。
     """
     all_jobs: dict[str, dict] = {}       # refnr -> normalized job
     all_keywords: dict[str, set[str]] = {}  # refnr -> set of keywords that found it
 
-    for keyword in JOB_KEYWORDS:
+    # 查询已有活跃职位，用于 defer-activate 判断
+    existing_active_refnrs: set[str] = set()
+    if defer_activate and supabase and not dry_run:
         try:
-            result = fetch_jobs(keyword)
-            stellenangebote = result.get("stellenangebote", [])
-            for item in stellenangebote:
-                refnr = str(item.get("refnr", "")) or str(item.get("arbeitsmarktdaten", {}).get("refnr", ""))
-                if not refnr:
-                    continue
-                if refnr not in all_jobs:
-                    all_jobs[refnr] = normalize_job(item)
-                    all_keywords[refnr] = set()
-                all_keywords[refnr].add(keyword)
+            resp = supabase.table("jobs").select("refnr").eq("is_active", True).execute()
+            existing_active_refnrs = {r["refnr"] for r in resp.data}
         except Exception as e:
-            print(f"[WARN] Failed to fetch keyword '{keyword}': {e}", file=sys.stderr)
+            print(f"[WARN] Failed to query existing active refnrs: {e}", file=sys.stderr)
+
+    for keyword in JOB_KEYWORDS:
+        for page in range(1, MAX_PAGES + 1):
+            try:
+                result = fetch_jobs(keyword, page=page)
+                stellenangebote = result.get("stellenangebote", [])
+                if not stellenangebote:
+                    break  # 没更多结果了，跳出翻页
+                for item in stellenangebote:
+                    refnr = str(item.get("refnr", "")) or str(item.get("arbeitsmarktdaten", {}).get("refnr", ""))
+                    if not refnr:
+                        continue
+                    if refnr not in all_jobs:
+                        all_jobs[refnr] = normalize_job(item)
+                        all_keywords[refnr] = set()
+                    all_keywords[refnr].add(keyword)
+                if page < MAX_PAGES:
+                    time.sleep(PAGE_DELAY)  # 页间节流
+            except Exception as e:
+                print(f"[WARN] Failed to fetch keyword '{keyword}' page {page}: {e}", file=sys.stderr)
+                if page == 1:
+                    break  # 第1页都失败则跳过此关键词
 
     # 合并关键词标签
     for refnr, kws in all_keywords.items():
@@ -199,6 +252,9 @@ def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
 
     for refnr, job in all_jobs.items():
         try:
+            # defer_activate: 新职位暂不展示，已有活跃职位不受影响
+            if defer_activate and refnr not in existing_active_refnrs:
+                job["is_active"] = False
             table.upsert(job, on_conflict="refnr").execute()
             upserted += 1
         except Exception as e:
@@ -231,11 +287,13 @@ def sync_jobs(supabase: Client, dry_run: bool = False) -> dict[str, int]:
 def main():
     parser = argparse.ArgumentParser(description="BA Jobbörse 日同步")
     parser.add_argument("--dry-run", action="store_true", help="仅打印不写入")
+    parser.add_argument("--defer-activate", action="store_true",
+                        help="新职位暂不激活（is_active=False），等 pipeline 翻译完成后统一激活")
     args = parser.parse_args()
 
     if not args.dry_run:
         supabase = get_supabase()
-        result = sync_jobs(supabase, dry_run=args.dry_run)
+        result = sync_jobs(supabase, dry_run=args.dry_run, defer_activate=args.defer_activate)
         print(json.dumps(result))
     else:
         sync_jobs(None, dry_run=True)

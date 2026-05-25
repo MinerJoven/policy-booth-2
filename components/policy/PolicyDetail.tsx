@@ -1,115 +1,137 @@
-import { CalendarDays, ExternalLink, FileText, Landmark, MapPin } from "lucide-react";
+import { CalendarDays, ExternalLink, FileText, Landmark, MapPin, CheckSquare, Clock, DollarSign, ListChecks, Tags } from "lucide-react";
 import { DisclaimerBanner } from "@/components/layout/DisclaimerBanner";
-import { RiskBadge } from "@/components/policy/RiskBadge";
-import { StatusBadge } from "@/components/policy/StatusBadge";
-import { TargetGroupTags } from "@/components/policy/TargetGroupTags";
 import { LEGAL_DISCLAIMER } from "@/lib/constants";
-import type { Policy } from "@/lib/types";
+import type { PolicyV2 } from "@/lib/types-v2";
 import { formatDate } from "@/lib/utils";
 
 interface PolicyDetailProps {
-  policy: Policy;
-  supersededByPolicy?: Policy;
+  policy: PolicyV2;
 }
 
-export function PolicyDetail({ policy, supersededByPolicy }: PolicyDetailProps) {
-  const paragraphs = policy.contentZh.split(/\n+/).filter(Boolean);
+export function PolicyDetail({ policy }: PolicyDetailProps) {
+  const hasGuide = policy.requirementsZh?.length > 0 || policy.feesZh || policy.durationZh || policy.stepsZh?.length > 0;
 
   return (
     <article className="mx-auto max-w-5xl px-5 py-8">
-      <div className="space-y-4">
-        {policy.riskLevel === "high" ? (
-          <DisclaimerBanner tone="danger">
-            该内容涉及居留、签证、入籍、税务、社保或类似重要事项时，仅可作为官方公开信息的中文辅助理解，不构成个案建议。
-          </DisclaimerBanner>
-        ) : null}
-
-        {policy.status === "expired" || supersededByPolicy ? (
-          <DisclaimerBanner tone="warning">
-            该政策已被标记为过期或可能已有新版，请优先查看最新官方来源
-            {supersededByPolicy ? `：${supersededByPolicy.titleZh}` : "。"}
-          </DisclaimerBanner>
-        ) : null}
-      </div>
-
-      <header className="mt-8 border-b border-line pb-8">
-        <div className="flex flex-wrap gap-2">
-          <RiskBadge riskLevel={policy.riskLevel} />
-          <StatusBadge status={policy.status} />
-        </div>
-        <h1 className="mt-5 text-3xl font-semibold leading-tight text-ink md:text-4xl">{policy.titleZh}</h1>
+      <header className="border-b border-line pb-8">
+        <h1 className="text-3xl font-semibold leading-tight text-ink md:text-4xl">{policy.titleZh}</h1>
         <p className="mt-3 text-base leading-7 text-neutral-600">{policy.titleDe}</p>
       </header>
 
       <section className="grid gap-4 border-b border-line py-6 md:grid-cols-2">
         <InfoItem icon={<Landmark className="h-4 w-4" />} label="发布机构" value={policy.publisher} />
-        <InfoItem icon={<ExternalLink className="h-4 w-4" />} label="官方来源" value={policy.officialUrl} href={policy.officialUrl} />
-        <InfoItem icon={<CalendarDays className="h-4 w-4" />} label="发布时间" value={formatDate(policy.publishedAt)} />
-        <InfoItem icon={<CalendarDays className="h-4 w-4" />} label="生效时间" value={formatDate(policy.effectiveAt)} />
-        <InfoItem icon={<MapPin className="h-4 w-4" />} label="地区层级" value={`${policy.regionLevel} · ${policy.regionName}`} />
-        <InfoItem icon={<FileText className="h-4 w-4" />} label="政策类别" value={policy.category} />
+        <InfoItem icon={<ExternalLink className="h-4 w-4" />} label="来源" value={policy.sourceName} href={policy.sourceUrl} />
+        {policy.lastFetchedAt ? (
+          <InfoItem icon={<CalendarDays className="h-4 w-4" />} label="更新日期" value={formatDate(policy.lastFetchedAt)} />
+        ) : null}
+        <InfoItem icon={<MapPin className="h-4 w-4" />} label="地区" value={`${policy.regionLevel} · ${policy.regionName}`} />
+        <InfoItem icon={<FileText className="h-4 w-4" />} label="类别" value={policy.category} />
+        {policy.tags?.length > 0 && (
+          <div className="rounded-lg border border-line bg-white p-4">
+            <p className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+              <Tags className="h-4 w-4" />
+              标签
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {policy.tags.map((tag) => (
+                <span key={tag} className="rounded-md bg-paper px-2 py-0.5 text-xs font-medium text-neutral-700">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="space-y-10 py-8">
+        {/* 办事指南区块（v2 核心功能） */}
+        {hasGuide && (
+          <section className="rounded-xl border border-policy-blue/20 bg-blue-50/50 p-6">
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-ink">
+              <ListChecks className="h-5 w-5 text-policy-blue" />
+              办事指南
+            </h2>
+            <p className="mt-2 text-sm text-neutral-600">以下信息由 AI 根据官方原文整理，仅供参考。请以官方最新信息为准。</p>
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              {policy.requirementsZh?.length > 0 && (
+                <div className="md:col-span-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <CheckSquare className="h-4 w-4 text-policy-green" />
+                    所需材料
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {policy.requirementsZh.map((req, i) => (
+                      <li key={i} className="flex items-start gap-2 rounded-lg border border-line bg-white px-4 py-3 text-sm leading-6 text-neutral-700">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-policy-green/10 text-xs font-bold text-policy-green">
+                          {i + 1}
+                        </span>
+                        {req}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {policy.feesZh && (
+                <div className="rounded-lg border border-line bg-white p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <DollarSign className="h-4 w-4 text-amber-500" />
+                    费用
+                  </h3>
+                  <p className="mt-2 text-base font-medium text-ink">{policy.feesZh}</p>
+                </div>
+              )}
+
+              {policy.durationZh && (
+                <div className="rounded-lg border border-line bg-white p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <Clock className="h-4 w-4 text-policy-blue" />
+                    办理时限
+                  </h3>
+                  <p className="mt-2 text-base font-medium text-ink">{policy.durationZh}</p>
+                </div>
+              )}
+            </div>
+
+            {policy.stepsZh?.length > 0 && (
+              <div className="mt-5">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <ListChecks className="h-4 w-4 text-policy-blue" />
+                  办理步骤
+                </h3>
+                <ol className="mt-3 space-y-3">
+                  {policy.stepsZh.map((step, i) => (
+                    <li key={i} className="flex items-start gap-3 rounded-lg border border-line bg-white px-4 py-3 text-sm leading-6 text-neutral-700">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-policy-blue text-xs font-bold text-white">
+                        {i + 1}
+                      </span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 摘要 */}
         <section>
-          <h2 className="text-xl font-semibold text-ink">一句话总结</h2>
+          <h2 className="text-xl font-semibold text-ink">政策摘要</h2>
           <p className="mt-3 rounded-lg border border-line bg-white p-4 text-base leading-8 text-neutral-800">
             {policy.summaryZh}
           </p>
         </section>
 
-        <section>
-          <h2 className="text-xl font-semibold text-ink">这条政策影响谁</h2>
-          <div className="mt-3">
-            <TargetGroupTags targetGroups={policy.targetGroups} />
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-ink">关键变化</h2>
-          <ul className="mt-3 space-y-3">
-            {policy.keyChanges.map((change) => (
-              <li key={change} className="rounded-lg border border-line bg-white px-4 py-3 text-sm leading-6 text-neutral-800">
-                {change}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-ink">对华人用户的影响</h2>
-          <p className="mt-3 text-base leading-8 text-neutral-700">{policy.impactZh}</p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-ink">你可能需要注意什么</h2>
-          <p className="mt-3 text-base leading-8 text-neutral-700">{policy.userNotes}</p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-ink">中文整理正文</h2>
-          <div className="content-flow mt-3 text-base text-neutral-700">
-            {paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-          </div>
-        </section>
-
-        {policy.contentDeSummary ? (
-          <details className="rounded-lg border border-line bg-white p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-ink">德文原文摘要</summary>
-            <p className="mt-3 text-sm leading-7 text-neutral-700">{policy.contentDeSummary}</p>
-          </details>
-        ) : null}
-
+        {/* 来源链接 */}
         <section className="rounded-lg border border-line bg-white p-5">
           <h2 className="text-xl font-semibold text-ink">官方来源</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600">
-            发布机构：{policy.publisher} · 发布时间：{formatDate(policy.publishedAt)}
+            发布机构：{policy.publisher} · 来源网站：{policy.sourceName}
           </p>
           <a
             className="focus-ring mt-4 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-policy-blue"
-            href={policy.officialUrl}
+            href={policy.sourceUrl}
             target="_blank"
             rel="noreferrer"
           >

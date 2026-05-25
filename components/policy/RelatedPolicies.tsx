@@ -1,7 +1,7 @@
 import { PolicyCard } from "@/components/policy/PolicyCard";
-import type { Policy } from "@/lib/types";
+import type { PolicyV2 } from "@/lib/types-v2";
 
-export function RelatedPolicies({ policies }: { policies: Policy[] }) {
+export function RelatedPolicies({ policies }: { policies: PolicyV2[] }) {
   if (policies.length === 0) {
     return null;
   }

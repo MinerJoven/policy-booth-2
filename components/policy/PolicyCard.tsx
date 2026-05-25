@@ -1,36 +1,21 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, ExternalLink, MapPin } from "lucide-react";
-import { RISK_CONFIG } from "@/lib/constants";
-import type { Policy } from "@/lib/types";
+import { ArrowRight, CalendarDays, ExternalLink, MapPin, Tags } from "lucide-react";
+import type { PolicyV2 } from "@/lib/types-v2";
 import { cn, formatDate } from "@/lib/utils";
-import { RiskBadge } from "@/components/policy/RiskBadge";
-import { StatusBadge } from "@/components/policy/StatusBadge";
-import { TargetGroupTags } from "@/components/policy/TargetGroupTags";
 
 interface PolicyCardProps {
-  policy: Policy;
-  showStatus?: boolean;
+  policy: PolicyV2;
 }
 
-export function PolicyCard({ policy, showStatus = false }: PolicyCardProps) {
+export function PolicyCard({ policy }: PolicyCardProps) {
   return (
-    <article
-      className={cn(
-        "rounded-lg border border-line border-l-4 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft",
-        RISK_CONFIG[policy.riskLevel].border
-      )}
-    >
-      <div className="flex flex-wrap gap-2">
-        <RiskBadge riskLevel={policy.riskLevel} />
-        {showStatus ? <StatusBadge status={policy.status} /> : null}
-      </div>
-
-      <Link href={`/policies/${policy.slug}`} className="focus-ring mt-4 block rounded-lg">
+    <article className="rounded-lg border border-line border-l-4 border-l-policy-blue bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
+      <Link href={`/policies/${policy.slug}`} className="focus-ring block rounded-lg">
         <h3 className="text-lg font-semibold leading-7 text-ink">{policy.titleZh}</h3>
         <p className="mt-1 text-sm leading-6 text-neutral-600">{policy.titleDe}</p>
       </Link>
 
-      <p className="mt-4 text-sm leading-6 text-neutral-700">{policy.summaryZh}</p>
+      <p className="mt-4 text-sm leading-6 text-neutral-700 line-clamp-3">{policy.summaryZh}</p>
 
       <div className="mt-4 grid gap-2 text-sm text-neutral-600 sm:grid-cols-2">
         <span className="inline-flex items-center gap-2">
@@ -41,18 +26,19 @@ export function PolicyCard({ policy, showStatus = false }: PolicyCardProps) {
           <MapPin className="h-4 w-4" />
           {policy.regionLevel} · {policy.regionName}
         </span>
-        <span className="inline-flex items-center gap-2">
-          <CalendarDays className="h-4 w-4" />
-          发布 {formatDate(policy.publishedAt)}
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <CalendarDays className="h-4 w-4" />
-          生效 {formatDate(policy.effectiveAt)}
-        </span>
-      </div>
-
-      <div className="mt-4">
-        <TargetGroupTags targetGroups={policy.targetGroups} />
+        {policy.lastFetchedAt ? (
+          <span className="inline-flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            更新 {formatDate(policy.lastFetchedAt)}
+          </span>
+        ) : null}
+        {policy.tags && policy.tags.length > 0 ? (
+          <span className="inline-flex items-center gap-2">
+            <Tags className="h-4 w-4" />
+            {policy.tags.slice(0, 2).join(" · ")}
+            {policy.tags.length > 2 ? ` +${policy.tags.length - 2}` : ""}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4">

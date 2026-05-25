@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { PolicyCard } from "@/components/policy/PolicyCard";
-import { listPoliciesData } from "@/lib/data";
+import { listPoliciesData } from "@/lib/data-v2";
 
 interface RegionPageProps {
   params: Promise<{ region: string }>;
