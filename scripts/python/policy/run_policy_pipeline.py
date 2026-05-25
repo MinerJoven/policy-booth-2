@@ -81,6 +81,10 @@ def main():
         run_script("scraper_finanztip.py", dry_flag)
         # Hundesteuer（市级犬税指南 - 首次市级数据）
         run_script("scraper_hundesteuer.py", dry_flag)
+        # Berlin LEA（柏林外管局 - 市级数据）
+        run_script("scraper_lea_berlin.py", dry_flag)
+        # Hamburg Amt für Migration（汉堡外管局 - 市级数据）
+        run_script("scraper_ab_hamburg.py", dry_flag)
     else:
         log("⏭ 跳过采集")
 
